@@ -1,5 +1,7 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const db = require('./db');
 const ukmRoutes = require('./routes/ukm');
 const pendaftarRoutes = require('./routes/pendaftar');
 const authRouthes  =require('./routes/auth');
@@ -19,4 +21,5 @@ app.use('/auth',authRouthes)
 app.get("/", (req, res) => {
   res.send("SIU-Backend is running...");
 });
+
 
