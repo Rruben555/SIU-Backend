@@ -22,4 +22,5 @@ app.get("/", (req, res) => {
   res.send("SIU-Backend is running...");
 });
 
+module.exports = app;
 
