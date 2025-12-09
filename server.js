@@ -16,7 +16,7 @@ app.use('/ukm', ukmRoutes);
 app.use('/pendaftar', pendaftarRoutes);
 app.use('/auth',authRouthes)
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.get("/", (req, res) => {
+  res.send("SIU-Backend is running...");
 });
 
