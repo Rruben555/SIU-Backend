@@ -130,35 +130,22 @@ router.delete('/:id', adminOnly, async (req, res) => {
 router.post('/:ukmId/kegiatan', adminOnly, async (req, res) => {
   try {
     const { ukmId } = req.params;
-    const { nama, deskripsi, tanggal, link_wa } = req.body;
-
-    if (!nama || !tanggal) {
-      return res.status(400).json({ error: 'Nama dan tanggal wajib diisi' });
-    }
-
+    const { nama, deskripsi, tanggal, link_wa } = req.body; // ✅ TAMBAH link_wa
+    
     const ukmCheck = await db.query('SELECT id FROM ukm WHERE id = $1', [ukmId]);
     if (ukmCheck.rows.length === 0) {
       return res.status(404).json({ error: 'UKM not found' });
     }
 
-    // buat link_wa opsional → jika undefined, simpan NULL
-    const fixedLinkWA = link_wa || null;
-
     const result = await db.query(
-      `INSERT INTO kegiatan (ukm_id, nama, deskripsi, tanggal, link_wa) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING *`,
-      [ukmId, nama, deskripsi, tanggal, fixedLinkWA]
+      'INSERT INTO kegiatan (ukm_id, nama, deskripsi, tanggal, link_wa) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [ukmId, nama, deskripsi, tanggal, link_wa] // ✅ link_wa
     );
-
     res.status(201).json(result.rows[0]);
-
   } catch (error) {
-    console.error("Kegiatan error:", error);
     res.status(500).json({ error: 'Failed to create kegiatan' });
   }
 });
-
 
 // PUT /ukm/:ukmId/kegiatan/:kegId - UPDATE link_wa
 router.put('/:ukmId/kegiatan/:kegId', adminOnly, async (req, res) => {
