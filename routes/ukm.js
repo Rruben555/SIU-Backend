@@ -24,10 +24,36 @@ function adminOnly(req, res, next) {
   });
 }
 
+// ✅ MIDDLEWARE USER LOGIN (BUAT KOMENTAR - BUKAN ADMIN ONLY)
+function requireLogin(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Login diperlukan!' });
+  }
+  
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token tidak valid' });
+    req.user = user;
+    next();
+  });
+}
+
+
 // ✅ PUBLIC: GET /ukm - Semua orang bisa lihat
 router.get('/', async (req, res) => {
   try {
-    const ukmResult = await db.query('SELECT * FROM ukm ORDER BY created_at DESC');
+    // ✅ GET UKM + KOMENTAR COUNT + AVG RATING
+    const ukmResult = await db.query(`
+      SELECT u.*, 
+             COUNT(k.id) as komentar_count,
+             COALESCE(AVG(k.rating), 0) as avg_rating
+      FROM ukm u 
+      LEFT JOIN komentar_ukm k ON u.id = k.ukm_id AND k.is_active = true
+      GROUP BY u.id 
+      ORDER BY u.created_at DESC
+    `);
 
     const ukmList = await Promise.all(ukmResult.rows.map(async (ukm) => {
       const kegiatanResult = await db.query('SELECT * FROM kegiatan WHERE ukm_id = $1', [ukm.id]);
@@ -53,7 +79,17 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const ukmResult = await db.query('SELECT * FROM ukm WHERE id = $1', [id]);
+    
+    // ✅ GET UKM + KOMENTAR STATS
+    const ukmResult = await db.query(`
+      SELECT u.*, 
+             COUNT(k.id) as komentar_count,
+             COALESCE(AVG(k.rating), 0) as avg_rating
+      FROM ukm u 
+      LEFT JOIN komentar_ukm k ON u.id = k.ukm_id AND k.is_active = true
+      WHERE u.id = $1 
+      GROUP BY u.id
+    `, [id]);
     
     if (ukmResult.rows.length === 0) {
       return res.status(404).json({ error: 'UKM not found' });
