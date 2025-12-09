@@ -6,21 +6,6 @@ const router = express.Router();
 
 const JWT_SECRET = 'your-super-secret-jwt-key-2025'; // Ganti di .env
 
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-  
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  });
-}
-
 // REGISTER
 router.post('/register', async (req, res) => {
   try {
@@ -86,6 +71,19 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// GET USER PROFILE (protected)
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const result = await db.query(
+      'SELECT id, nama, nim, email, fakultas, role FROM users WHERE id = $1',
+      [userId]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal load profile' });
+  }
+});
 
 // TAMBAH INI di auth.js (setelah POST /register biasa)
 router.post('/register-admin', async (req, res) => {
