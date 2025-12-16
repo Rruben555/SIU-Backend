@@ -105,79 +105,40 @@ router.get('/', authenticateToken, async (req, res) => {
 // POST /pendaftar (User daftar)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    // 1️⃣ Admin tidak boleh register
     if (req.user.role === 'admin') {
       return res.status(403).json({ error: 'Admin cannot register' });
     }
-
+    
     const userId = req.user.userId;
     const { ukm_id, kegiatan_id, type } = req.body;
-
+    
     if (!ukm_id || !type || !['anggota', 'kegiatan'].includes(type)) {
       return res.status(400).json({ error: 'ukm_id dan type wajib diisi' });
     }
-
-    // 2️⃣ Cek UKM ada
-    const ukmCheck = await db.query(
-      'SELECT id FROM ukm WHERE id = $1',
-      [ukm_id]
-    );
+    
+    const ukmCheck = await db.query('SELECT id FROM ukm WHERE id = $1', [ukm_id]);
     if (ukmCheck.rows.length === 0) {
       return res.status(404).json({ error: 'UKM not found' });
     }
-
-    // 3️⃣ Cek sudah pernah daftar
+    
     const existing = await db.query(
-      `
-      SELECT id 
-      FROM user_ukm_registrations 
-      WHERE user_id = $1 AND ukm_id = $2 AND type = $3
-      `,
+      'SELECT id FROM user_ukm_registrations WHERE user_id = $1 AND ukm_id = $2 AND type = $3',
       [userId, ukm_id, type]
     );
-
+    
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Sudah terdaftar' });
     }
-
-    // ===============================
-    // 4️⃣ BATAS MAKS 2 UKM (NON-ADMIN)
-    // ===============================
-    if (type === 'anggota') {
-      const countResult = await db.query(
-        `
-        SELECT COUNT(DISTINCT ukm_id) 
-        FROM user_ukm_registrations
-        WHERE user_id = $1 AND type = 'anggota'
-        `,
-        [userId]
-      );
-
-      const totalUkm = parseInt(countResult.rows[0].count);
-
-      if (totalUkm >= 2) {
-        return res.status(403).json({
-          error: 'User non-admin hanya boleh mendaftar maksimal ke 2 UKM'
-        });
-      }
-    }
-
-    // 5️⃣ INSERT registrasi
+    
     const result = await db.query(
-      `
-      INSERT INTO user_ukm_registrations 
-      (user_id, ukm_id, kegiatan_id, type) 
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-      `,
+      'INSERT INTO user_ukm_registrations (user_id, ukm_id, kegiatan_id, type) VALUES ($1, $2, $3, $4) RETURNING *',
       [userId, ukm_id, kegiatan_id || null, type]
     );
-
-    res.status(201).json({
+    
+    res.status(201).json({ 
       message: '✅ Berhasil daftar! Menunggu konfirmasi admin',
-      registration: result.rows[0]
+      registration: result.rows[0] 
     });
-
   } catch (error) {
     console.error('Error creating registration:', error);
     res.status(500).json({ error: 'Failed to register' });
@@ -236,4 +197,3 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
-
